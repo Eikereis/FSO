@@ -22,7 +22,7 @@ const App = () => {
   }, [])
 
   const handleFilterChange = (event) => setFilter(event.target.value)
-
+""
   const handleShowClick = (country) => setSelectedCountry(country)
 
   const countriesToShow = filter
