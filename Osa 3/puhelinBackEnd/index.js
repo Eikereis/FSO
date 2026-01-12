@@ -1,108 +1,106 @@
-const express = require("express")
-const morgan = require("morgan")
-const app = express()
-const cors = require("cors")
-const PORT = process.env.PORT || 3001
-app.use(cors())
-app.use(express.static("build"))
-app.use(morgan("dev"))
+const express = require("express");
+const app = express();
+const morgan = require("morgan");
+const cors = require("cors");
 
-morgan.token("body", (req, res) => JSON.stringify(req.body))
+const PORT = process.env.PORT || 3001;
+
+app.use(cors());
+app.use(express.json());
+app.use(express.static("dist"));
+app.use(morgan("tiny"));
+
+// Defining a custom token for morgan to log the request body for POST requests
+morgan.token("req-body", (req) => {
+  if (req.method === "POST") {
+    return JSON.stringify(req.body);
+  }
+  return "";
+});
+
+// Middleware for logging with custom format
 app.use(
-  morgan(":method :url :status :res[content-length] - :response-time ms :body]")
-)
-
-app.use(express.json())
-
+  morgan(
+    ":method :url :status :res[content-length] - :response-time ms :req-body"
+  )
+);
 
 let persons = [
-    { 
-      "id": "1",
-      "name": "Arto Hellas", 
-      "number": "040-123456"
-    },
-    { 
-      "id": "2",
-      "name": "Ada Lovelace", 
-      "number": "39-44-5323523"
-    },
-    { 
-      "id": "3",
-      "name": "Dan Abramov", 
-      "number": "12-43-234345"
-    },
-    { 
-      "id": "4",
-      "name": "Mary Poppendieck", 
-      "number": "39-23-6423122"
-    }
-]
+  {
+    id: 1,
+    name: "Arto Hellas",
+    number: "040-123456",
+  },
+  {
+    id: 2,
+    name: "Ada Lovelace",
+    number: "39-44-5323523",
+  },
+  {
+    id: 3,
+    name: "Dan Abramov",
+    number: "12-43-234345",
+  },
+  {
+    id: 4,
+    name: "Mary Poppendieck",
+    number: "39-23-6423122",
+  },
+];
 
-
-
-app.get("/info", (request, response) => {
-  response.send(
-    `<p>Phonebook has info for ${persons.length} people</p>
-     <p>${new Date()}</p>`
-  )
-})
-
-app.get("/api/persons/:id", (request, response) => {
-  const id = request.params.id
-  const person = persons.find(p => p.id === id)
-  if (person) {
-    response.send(person)
-  } else {
-    response.status(404).send({ error: "Person not found" })
-  }
-})
-
-app.get("/api/persons", (request, response) => {
-  response.send(persons)
+// Getting all persons
+app.get("/api/persons", (req, res) => {
+  res.send(persons);
 });
 
-app.listen(3001, () => {
-  console.log("Server running on port 3001")
+// Getting person info
+app.get("/info", (req, res) => {
+  res.send(
+    `Phonebook has info for ${persons.length} people. <br><br> ${Date()}`
+  );
 });
 
-app.delete("/api/persons/:id", (request, response) => {
-  const id = request.params.id
-  persons = persons.filter(p => p.id !== id)
-  response.status(204).end()
-})  
+// Getting a single person
+app.get("/api/persons/:id", (req, res) => {
+  const id = Number(req.params.id);
+  const person = persons.find((person) => person.id === id);
+  if (!person) {
+    res.status(404).send(`Person with id:${id} is NOT FOUND!`);
+  }
+  res.send(person);
+});
 
+// function to generate a random value for each new entry
+const generatedId = () => {
+  const maxId =
+    persons.length > 0 ? Math.floor(Math.random() * (200 - 5 + 1) + 5) : 0;
+  return maxId + 1;
+};
 
-
-const generateId = () => Math.floor(Math.random() * 1000000)
-
-app.post("/api/persons", (request, response) => {
-  const { name, number } = request.body
-  const chekIfAlreadyExist = persons.some((person) => person.name === name)
-
-  if (!name || !number) {
-    return response.status(400).json({
-      error: "name or number is missing",
-    })
+// creating a new entry from the user
+app.post("/api/persons", (req, res) => {
+  const body = req.body;
+  body.id = generatedId();
+  if (!body.name || !body.number) {
+    res.status(404).json({ error: "name or number is missing" });
   }
 
-  if (chekIfAlreadyExist) {
-    return response.status(400).json({
-      error: "name must be unique",
-    })
+  const existingName = persons.find((person) => person.name === body.name);
+  if (existingName) {
+    res.status(400).json({ error: "name must be unique" });
   }
 
-  const person = {
-    name: name,
-    number: number || null,
-    id: generateId(),
-  }
+  persons = persons.concat(body);
+  res.status(201).send(persons);
+});
 
-  persons = persons.concat(person)
-
-  response.json(person)
-})
-
+// Deleting a single person
+app.delete("/api/persons/:id", (req, res) => {
+  const id = Number(req.params.id);
+  let deletedPerson = persons.filter((person) => person.id !== id);
+  res.send(deletedPerson);
+});
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`)
-})
+  console.log(`Server running on port ${PORT}`);
+});
