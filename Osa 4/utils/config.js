@@ -1,7 +1,9 @@
-const PORT = 3003
-const MONGODB_URI = 'mongodb+srv://moocanton_db_user:dbaccess@cluster0.lplakaz.mongodb.net/nameProject?appName=bloglist'
+require('dotenv').config()
 
+const PORT = process.env.PORT
+
+const MONGODB_URI = process.env.NODE_ENV === 'test'   ? process.env.TEST_MONGODB_URI  : process.env.MONGODB_URI
 module.exports = {
-  PORT,
   MONGODB_URI,
+  PORT
 }
